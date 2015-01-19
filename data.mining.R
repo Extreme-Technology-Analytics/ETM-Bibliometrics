@@ -29,7 +29,11 @@ if (length(file.loc) > 0) {
                                       stringsAsFactors = FALSE),
                error = function(e) stop("Error opening/reading txt file. Ensure Web Of Science file downloaded according to description: ", e))
       c.names <- colnames(data.tmp)
-      colnames(data.tmp) <- c("PT", colnames(data.tmp)[-1:-2])
+      c.au <- match("AU", c.names)
+      if (!is.na(c.au))
+        colnames(data.tmp) <- c("PT", colnames(data.tmp)[-1:-(c.au-1)])
+      else
+        stop("Author Column not part of Data. Ensure correct and complete data downloaded from WOS")
       data <- rbind(data, data.tmp)                        
     }
   
@@ -81,6 +85,9 @@ if (length(file.loc) > 0) {
   # Convert response to binary
   plot.result.b <- ifelse(tolower(plot.result) == "y", TRUE, FALSE)
   # If user wants to plot results, ask what metric to plot by: [1] Degree, [2] Betweenness
+  # Set default ploy.by and plot.count. This is used when displaying the results in the console.
+  plot.by <- 2
+  plot.count <- 20
   if (plot.result.b) {
     plot.by <- as.numeric(readline(cat("Plot nodes by: [1] Degree, [2] Betweenness")))
     # If invalid value entered, use [2] Betweenness as the default value
@@ -178,7 +185,13 @@ if (length(file.loc) > 0) {
       v.size <- degree(net.s, mode="in")
     else
       v.size <- betweenness(net.s)
-    v.size <- ifelse(max(v.size) == 0, 1, (v.size/max(v.size)) * 20)
+      
+    # Adjust size of vertices to be between 0 and 20. If largest centrality is 0 set all sizes to 1.
+    if (max(v.size) == 0)
+      v.size = 1
+    else
+      v.size <- (v.size/max(v.size)) * 20
+
     e.size <- (E(net.s)$weight/max(E(net.s)$weight)) * 4
     if (!plot.edges.b)
       net.s <- delete.edges(net.s, E(net.s)[e.size <= 1])
